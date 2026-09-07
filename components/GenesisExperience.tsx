@@ -11,19 +11,25 @@ import MenuBar from "@/components/desktop/MenuBar";
 function Dock({ scrollToEra }: { scrollToEra: (index: number) => void }) {
   const mouseX = useMotionValue(-100);
   const springX = useSpring(mouseX, { stiffness: 300, damping: 24 });
+  const [finePointer, setFinePointer] = useState(false);
   const icons = [null, Monitor, Folder, Headphones, MousePointer2];
-  return <nav className="dock" onMouseMove={(event) => mouseX.set(event.clientX)} onMouseLeave={() => mouseX.set(-100)} aria-label="Jump to era">{icons.map((Icon, index) => <DockIcon key={eras[index].id} Icon={Icon} index={index} springX={springX} onClick={() => scrollToEra(index)} />)}</nav>;
+  useEffect(() => { const query = window.matchMedia("(hover: hover) and (pointer: fine)"); const update = () => setFinePointer(query.matches); update(); query.addEventListener("change", update); return () => query.removeEventListener("change", update); }, []);
+  return <nav className="dock" onMouseMove={finePointer ? (event) => mouseX.set(event.clientX) : undefined} onMouseLeave={finePointer ? () => mouseX.set(-100) : undefined} aria-label="Jump to era">{icons.map((Icon, index) => <DockIcon key={eras[index].id} Icon={Icon} index={index} springX={springX} finePointer={finePointer} onClick={() => scrollToEra(index)} />)}</nav>;
 }
 
-function DockIcon({ Icon, index, springX, onClick }: { Icon: typeof Grid2X2 | null; index: number; springX: ReturnType<typeof useSpring>; onClick: () => void }) {
+function DockIcon({ Icon, index, springX, finePointer, onClick }: { Icon: typeof Grid2X2 | null; index: number; springX: ReturnType<typeof useSpring>; finePointer: boolean; onClick: () => void }) {
   const center = 35 + index * 58;
-  const scale = useTransform(springX, (x) => Math.max(1, 1.45 - Math.abs(x - center) / 105));
+  const scale = useTransform(springX, (x) => finePointer ? Math.max(1, 1.45 - Math.abs(x - center) / 105) : 1);
   return <motion.button className="dock-icon" style={{ scale }} whileTap={{ scale: 0.88 }} onClick={onClick} aria-label={`Jump to ${eras[index].title}`}>{Icon ? <Icon size={22} strokeWidth={1.7} /> : <Image className="dock-apple-logo" src="/apple-logo.png" alt="Apple era" width={25} height={25} />}</motion.button>;
 }
 
 function ArtifactWindow({ index, onClose }: { index: number; onClose: () => void }) {
   const era = eras[index];
-  return <motion.div className="artifact-window" drag dragConstraints={{ left: -80, right: 80, top: -120, bottom: 120 }} dragElastic={0.05} initial={{ opacity: 0, scale: 0.5, y: 48 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.75, y: 40 }} transition={{ type: "spring", stiffness: 240, damping: 22 }}><div className="window-top"><div className="traffic-lights"><button className="traffic red" onClick={onClose} aria-label="Close artifact"><X size={9} /></button><span className="traffic yellow" /><span className="traffic green" /></div><span>{era.artifact.label}</span><button className="window-search" aria-label="Search"><Search size={13} /></button></div><div className="artifact-content"><span className="artifact-glyph">{era.artifact.glyph}</span><div><p className="eyebrow">{era.years}</p><h3>{era.artifact.title}</h3><p>{era.artifact.detail}</p></div></div><div className="window-footer"><span><Play size={10} fill="currentColor" /> now playing</span><span>drag window</span></div></motion.div>;
+  const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const [touchLayout, setTouchLayout] = useState(false);
+  useEffect(() => { const update = () => { setViewport({ width: window.innerWidth, height: window.innerHeight }); setTouchLayout(window.innerWidth < 640); }; update(); window.addEventListener("resize", update); return () => window.removeEventListener("resize", update); }, []);
+  const dragConstraints = { left: -Math.max(0, (viewport.width - 680) / 2), right: Math.max(0, (viewport.width - 680) / 2), top: -Math.max(0, viewport.height * 0.2), bottom: Math.max(0, viewport.height * 0.2) };
+  return <motion.div className={`artifact-window ${touchLayout ? "artifact-touch" : ""}`} drag={!touchLayout} dragConstraints={dragConstraints} dragElastic={0.05} initial={{ opacity: 0, scale: 0.5, y: 48 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.75, y: 40 }} transition={{ type: "spring", stiffness: 240, damping: 22 }}><div className="window-top"><div className="traffic-lights"><button className="traffic red" onClick={onClose} aria-label="Close artifact"><X size={9} /></button><span className="traffic yellow" /><span className="traffic green" /></div><span>{era.artifact.label}</span><button className="window-search" aria-label="Search"><Search size={13} /></button></div><div className="artifact-content"><span className="artifact-glyph">{era.artifact.glyph}</span><div><p className="eyebrow">{era.years}</p><h3>{era.artifact.title}</h3><p>{era.artifact.detail}</p></div></div><div className="window-footer"><span><Play size={10} fill="currentColor" /> now playing</span><span>{touchLayout ? "tap to close" : "drag window"}</span></div></motion.div>;
 }
 
 function EraSection({ index, onEnter }: { index: number; onEnter: (index: number) => void }) {

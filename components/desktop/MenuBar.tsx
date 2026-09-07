@@ -9,6 +9,7 @@ import { useStoryStore } from "@/lib/store";
 
 export default function MenuBar() {
   const [time, setTime] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
   const era = eras[useStoryStore((state) => state.currentEra)];
 
   useEffect(() => {
@@ -28,16 +29,19 @@ export default function MenuBar() {
       <div className="menu-left">
         <Image className="menu-profile" src="/profile-pic.jpg" alt="Genesis logo" width={100} height={100} priority />
         <strong>Genesis</strong>
-        <span className="menu-item">Story</span>
-        <span className="menu-item">Archive</span>
-        <span className="menu-item">View</span>
+        <div className="menu-links">
+          <span className="menu-item">Story</span>
+          <span className="menu-item">Archive</span>
+          <span className="menu-item">View</span>
+        </div>
       </div>
       <div className="menu-right">
-        <span className="menu-control"><Menu size={13} /></span>
+        <button className="menu-control" onClick={() => setMenuOpen((open) => !open)} aria-label="Open navigation menu" aria-expanded={menuOpen}><Menu size={16} /></button>
         <span className="battery-status"><BatteryMedium size={14} /><span>100%</span></span>
         <Wifi size={14} />
         <span>{time}</span>
       </div>
+      {menuOpen && <div className="menu-sheet"><button onClick={() => setMenuOpen(false)}>Story</button><button onClick={() => setMenuOpen(false)}>Archive</button><button onClick={() => setMenuOpen(false)}>View</button></div>}
     </motion.header>
   );
 }
